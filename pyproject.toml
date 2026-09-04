@@ -6,6 +6,7 @@ requires-python = ">=3.14"
 dependencies = [
     "ipykernel>=7.3.0",
     "matplotlib>=3.11.1",
+    "python-dotenv>=1.2.3",
     "requests>=2.34.2",
     "skyfield>=1.55",
 ]
