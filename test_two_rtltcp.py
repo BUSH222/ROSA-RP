@@ -21,7 +21,7 @@ def worker(label, outfile, start_delay):
                     try:
                         data = sock.recv(CHUNK_SIZE)
                     except TimeoutError:
-                        print("TIMEOUT")
+                        print(f"TIMEOUT from {label}")
                         continue
                     if not data:
                         print(f"[{label}] server closed the connection")
