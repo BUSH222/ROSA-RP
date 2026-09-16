@@ -3,7 +3,10 @@ name = "template"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pandas>=3.0.5",
+    "pydantic-settings>=2.15.0",
+]
 
 [dependency-groups]
 dev = [

@@ -4,13 +4,10 @@ import threading
 import time
 from pathlib import Path
 
+from config.settings import settings
 from core.models import Satellite
 
 logger = logging.getLogger(__name__)
-
-MIN_FREQUENCY_HZ = 135e6
-MAX_FREQUENCY_HZ = 139e6
-VALID_DECIMATION_FACTORS = [1, 2, 4, 8, 16, 32, 64]
 
 
 class SatelliteValidationError(Exception):
@@ -35,9 +32,11 @@ def validate_satellites(raw: list[dict]) -> list[Satellite]:
             raise SatelliteValidationError(f"Item {i} has invalid id: {id}")
         if not isinstance(name, str) or not name:
             raise SatelliteValidationError(f"Item {i} has invalid name: {name}")
-        if not isinstance(frequency, (int, float)) or not (MIN_FREQUENCY_HZ <= frequency <= MAX_FREQUENCY_HZ):
+        if not isinstance(frequency, (int, float)) or not (
+            settings.loader.min_frequency_hz <= frequency <= settings.loader.max_frequency_hz
+        ):
             raise SatelliteValidationError(f"Item {i} has invalid frequency: {frequency}")
-        if decimation_factor not in VALID_DECIMATION_FACTORS:
+        if decimation_factor not in settings.loader.valid_decimation_factors:
             raise SatelliteValidationError(f"Item {i} has invalid decimation_factor: {decimation_factor}")
 
         satellites.append(Satellite(id=id, name=name, frequency=frequency, decimation_factor=decimation_factor))
