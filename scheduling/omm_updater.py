@@ -1,29 +1,63 @@
+from __future__ import annotations
+
+import csv
+import io
+import logging
+
 import requests
 
 from config.settings import settings
 from core.models import OmmSnapshot
 from storage.db import get_connection, insert_omm_snapshot
 
+logger = logging.getLogger(__name__)
 
-def update_omm(satellites):
-    """Update OMM data and write them in the database"""
-    with requests.session() as session:
-        login_url = "https://www.space-track.org/ajaxauth/login"
-        payload = {
-            "identity": settings.secrets.space_track_username,
-            "password": settings.secrets.space_track_password,
-        }
-        session.post(login_url, data=payload)
-        target_sat_norads = []
-        for sat in satellites:
-            target_sat_norads.append(sat.id)
-        target_sat_norads = ",".join(str(norad) for norad in target_sat_norads)
-        omm_csv = session.get(
-            f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{target_sat_norads}/orderby/NORAD_CAT_ID%20asc/format/csv/emptyresult/show"
+SPACE_TRACK_LOGIN_URL = "https://www.space-track.org/ajaxauth/login"
+SPACE_TRACK_QUERY_URL = (
+    "https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norads}"
+    "/orderby/NORAD_CAT_ID%20asc/format/csv/emptyresult/show"
+)
+
+
+class OmmUpdateError(Exception):
+    pass
+
+
+def update_omm(satellites) -> list[int]:
+    """Fetch latest OMM/GP data for `satellites` from Space-Track and store
+    new snapshots. Returns the row ids written (existing rows return their
+    already-stored id, per insert_omm_snapshot's gp_id dedup).
+    """
+    if not satellites:
+        return []
+
+    norads = ",".join(str(sat.id) for sat in satellites)
+
+    with requests.Session() as session:
+        login_resp = session.post(
+            SPACE_TRACK_LOGIN_URL,
+            data={
+                "identity": settings.secrets.space_track_username,
+                "password": settings.secrets.space_track_password,
+            },
+            timeout=30,
         )
+        login_resp.raise_for_status()
+        if "Login Failed" in login_resp.text:
+            raise OmmUpdateError("Space-Track login failed - check credentials")
+
+        response = session.get(SPACE_TRACK_QUERY_URL.format(norads=norads), timeout=30)
+        response.raise_for_status()
+
+    row_ids = []
     with get_connection() as conn:
-        for row in omm_csv.text.splitlines()[1:]:
-            row_data = row.split(",")
-            omm_snapshot = OmmSnapshot.from_csv_row(row_data)
-            row_id = insert_omm_snapshot(conn, omm_snapshot)
-    return row_id
+        for row in csv.DictReader(io.StringIO(response.text)):
+            try:
+                snapshot = OmmSnapshot.from_csv_row(row)
+            except (KeyError, ValueError) as e:
+                logger.warning("Skipping malformed OMM row: %s", e)
+                continue
+            row_ids.append(insert_omm_snapshot(conn, snapshot))
+
+    logger.info("Updated OMMs for %d satellite(s), %d snapshot(s) stored", len(satellites), len(row_ids))
+    return row_ids
