@@ -76,6 +76,14 @@ class DatabaseSettings(BaseSettings):
     sqlite_path: Path = Field(default=Path("satcap.db"))
 
 
+class Secrets(BaseSettings):
+    """API keys, passwords, etc"""
+
+    openweather_api_key: str = Field(default="", env="OPENWEATHER_API_KEY")
+    space_track_username: str = Field(default="", env="SPACE_TRACK_USERNAME")
+    space_track_password: str = Field(default="", env="SPACE_TRACK_PASSWORD")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CONFIG__",
@@ -91,6 +99,7 @@ class Settings(BaseSettings):
     external_apis: ExternalApiSettings = ExternalApiSettings()
     rtl_tcp: RTLTCPSettings = RTLTCPSettings()
     database: DatabaseSettings = DatabaseSettings()
+    secrets: Secrets = Secrets()
 
     output_dir: Path = Field(default=Path("observations"))
     max_concurrent_recordings: int = 5
