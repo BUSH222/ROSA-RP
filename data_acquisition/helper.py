@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import logging
 import xml.etree.ElementTree as ET
-from typing import Any
 
 import pandas as pd
 import requests
@@ -32,7 +29,7 @@ def safe_get_text(url: str, timeout: float = settings.data_acquisition.helper.de
         return None
 
 
-def parse_esa_ism_xml(xml_string):
+def parse_esa_ism_xml(xml_string: str):
     root = ET.fromstring(xml_string)
     data_type = next(elem for elem in root.iter() if elem.tag.split("}")[-1] == "dataType")
 
@@ -84,7 +81,7 @@ def dataframe_to_records(df: pd.DataFrame):
     return df.where(df.notna(), None).to_dict(orient="records")
 
 
-def serialize_timestamp(value: Any):
+def serialize_timestamp(value):
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return value

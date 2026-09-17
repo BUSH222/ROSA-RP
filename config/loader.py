@@ -14,7 +14,7 @@ class SatelliteValidationError(Exception):
     pass
 
 
-def validate_satellites(raw: list[dict]) -> list[Satellite]:
+def validate_satellites(raw: list[dict]):
     satellites = []
     for i, item in enumerate(raw):
         if not isinstance(item, dict):
@@ -44,7 +44,7 @@ def validate_satellites(raw: list[dict]) -> list[Satellite]:
 
 
 class SatelliteLoader:
-    def __init__(self, path: str, poll_interval: float = 60.0):
+    def __init__(self, path: str, poll_interval: float = settings.loader.poll_interval_s):
         self.path = Path(path)
         self.poll_interval = poll_interval
 

@@ -10,6 +10,7 @@ class LoaderSettings(BaseSettings):
     min_frequency_hz: float = 135e6
     max_frequency_hz: float = 139e6
     valid_decimation_factors: list[int] = [1, 2, 4, 8, 16, 32, 64]
+    poll_interval_s: float = 60.0
 
 
 class HelperSettings(BaseSettings):
@@ -69,6 +70,12 @@ class RTLTCPSettings(BaseSettings):
     frame_samples: int = 32768
 
 
+class DatabaseSettings(BaseSettings):
+    """Settings used in db.py."""
+
+    sqlite_path: Path = Field(default=Path("satcap.db"))
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CONFIG__",
@@ -83,6 +90,7 @@ class Settings(BaseSettings):
     site: SiteSettings = SiteSettings()
     external_apis: ExternalApiSettings = ExternalApiSettings()
     rtl_tcp: RTLTCPSettings = RTLTCPSettings()
+    database: DatabaseSettings = DatabaseSettings()
 
     output_dir: Path = Field(default=Path("observations"))
     max_concurrent_recordings: int = 5

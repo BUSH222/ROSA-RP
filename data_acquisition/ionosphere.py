@@ -3,7 +3,6 @@ import logging
 import os
 import time
 import zipfile
-from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -12,16 +11,13 @@ from config.settings import settings
 
 from . import helper
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def fetch_regular_weather(lat: float = settings.site.lat, lon: float = settings.site.lon) -> dict | None:
+def fetch_regular_weather(lat: float = settings.site.lat, lon: float = settings.site.lon):
     """Current OpenWeather conditions for the site (temp, pressure, wind, etc.)."""
     api_key = os.getenv("OPENWEATHER_API_KEY")
     if not api_key:
@@ -31,14 +27,14 @@ def fetch_regular_weather(lat: float = settings.site.lat, lon: float = settings.
     return helper.safe_get_json(url)
 
 
-def is_thunderstorm(weather: dict | None) -> bool:
+def is_thunderstorm(weather: dict | None):
     """True if the current conditions include a thunderstorm (equipment-safety check)."""
     if not weather:
         return False
     return any(w.get("main") == "Thunderstorm" for w in weather.get("weather", []))
 
 
-def fetch_vtec_local(lat: float = settings.site.lat, lon: float = settings.site.lon) -> dict | None:
+def fetch_vtec_local(lat: float = settings.site.lat, lon: float = settings.site.lon):
     """DLR global VTEC nowcast, reduced to points near the site + a global summary."""
     raw = helper.safe_get_json(settings.external_apis.dlr_vtec_global_url)
     if raw is None:
@@ -79,9 +75,7 @@ def fetch_vtec_local(lat: float = settings.site.lat, lon: float = settings.site.
     }
 
 
-def fetch_esa_ism_local(
-    url: str, lat: float = settings.site.lat, lon: float = settings.site.lon
-) -> tuple[list[dict] | None, pd.Timestamp | None]:
+def fetch_esa_ism_local(url: str, lat: float = settings.site.lat, lon: float = settings.site.lon):
     """Fetch one ESA SWE ISM nowcast grid (S4 / sigma-phi / TEC) near the site."""
     xml_text = helper.safe_get_text(url)
     if xml_text is None:
@@ -102,17 +96,17 @@ def fetch_esa_ism_local(
 # Geomagnetic conditions
 
 
-def fetch_gfz_kp() -> list | None:
+def fetch_gfz_kp():
     """GFZ Kp nowcast: list of [unix_ms_timestamp, kp]."""
     return helper.safe_get_json(settings.external_apis.gfz_kp_url)
 
 
-def fetch_gfz_hp30() -> list | None:
+def fetch_gfz_hp30():
     """GFZ Hp30 nowcast: list of [unix_ms_timestamp, hp30]."""
     return helper.safe_get_json(settings.external_apis.gfz_hp30_url)
 
 
-def fetch_kyoto_dst() -> list | None:
+def fetch_kyoto_dst():
     """Kyoto/NOAA Dst index time series."""
     return helper.safe_get_json(settings.external_apis.noaa_kyoto_dst_url)
 
@@ -120,22 +114,22 @@ def fetch_kyoto_dst() -> list | None:
 # Solar wind, interplanetary magnetic field, and solar activity
 
 
-def fetch_solar_wind_speed() -> list | None:
+def fetch_solar_wind_speed():
     """NOAA solar wind speed summary, km/s."""
     return helper.safe_get_json(settings.external_apis.noaa_solar_wind_speed_url)
 
 
-def fetch_solar_wind_mag_field() -> list | None:
+def fetch_solar_wind_mag_field():
     """NOAA solar wind magnetic field summary, nT (bt, bz_gsm)."""
     return helper.safe_get_json(settings.external_apis.noaa_solar_wind_mag_field_url)
 
 
-def fetch_10cm_flux() -> list | None:
+def fetch_10cm_flux():
     """NOAA 10 cm solar flux, sfu."""
     return helper.safe_get_json(settings.external_apis.noaa_10cm_flux_url)
 
 
-def fetch_noaa_scales() -> dict | None:
+def fetch_noaa_scales():
     """NOAA space-weather scales (R/S/G), current + forecast."""
     return helper.safe_get_json(settings.external_apis.noaa_scales_url)
 
@@ -143,7 +137,7 @@ def fetch_noaa_scales() -> dict | None:
 # Snapshot assembly + storage
 
 
-def build_observation_snapshot(lat: float = settings.site.lat, lon: float = settings.site.lon) -> dict[str, Any]:
+def build_observation_snapshot(lat: float = settings.site.lat, lon: float = settings.site.lon):
     """Fetch every data source and assemble one observation snapshot dict."""
     started_at = time.time()
 
@@ -212,7 +206,7 @@ def save_snapshot(snapshot, output_dir):
     return zip_path
 
 
-def collect_observation(output_dir: Path, lat: float = settings.site.lat, lon: float = settings.site.lon):
+def collect_observation(output_dir, lat: float = settings.site.lat, lon: float = settings.site.lon):
     """Collect and store one full observation snapshot.
 
     Call this once at the start of an observation session. Skips saving (and
