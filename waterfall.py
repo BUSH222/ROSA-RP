@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 from PIL import Image
 from scipy.fft import fft
@@ -72,6 +74,8 @@ def process(input_file, output_file):
 
 
 if __name__ == "__main__":
-    filename = "/Users/tedvtorov/Desktop/57166_20260910T180503Z.iq"
-    out = "out.png"
-    process(filename, out)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+    process(args.input, args.output)
