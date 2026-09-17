@@ -96,7 +96,7 @@ class OmmSnapshot:
     norad_id: int
     epoch: str
     fetched_at: str = field(default_factory=utcnow_iso)
-    id = None
+    id: int | None = None
     raw: dict = field(default_factory=dict)
 
     @classmethod
@@ -143,12 +143,12 @@ class Job:
     f_center: float
     decimation: int
     state: str = "pending"
-    omm_snapshot_id = None
-    observation_dir = None
-    pid = None
+    omm_snapshot_id: int | None = None
+    observation_dir: str | None = None
+    pid: int | None = None
     created_at: str = field(default_factory=utcnow_iso)
     updated_at: str = field(default_factory=utcnow_iso)
-    failure_reason = None
+    failure_reason: str | None = None
 
     @classmethod
     def from_row(cls, row):
