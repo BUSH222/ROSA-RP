@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     secrets: Secrets = Secrets()
 
     output_dir: Path = Field(default=Path("observations"))
+    debug: bool = Field(default=False, env="DEBUG")
     max_concurrent_recordings: int = 5
 
 

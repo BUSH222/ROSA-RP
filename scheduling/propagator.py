@@ -22,7 +22,11 @@ def _qth():
 
 def satellite_from_snapshot(snapshot: OmmSnapshot) -> EarthSatellite:
     """Build a skyfield EarthSatellite from a stored OMM snapshot's raw fields."""
-    return EarthSatellite.from_omm(ts, snapshot.raw)
+    snapshot_raw_uppercase = {}
+    for k, v in snapshot.raw.items():
+        snapshot_raw_uppercase[k.upper()] = v
+    snapshot_raw_uppercase["EPOCH"] = snapshot.epoch
+    return EarthSatellite.from_omm(ts, snapshot_raw_uppercase)
 
 
 def find_passes(satellite: EarthSatellite, start: datetime, end: datetime, min_elevation_deg: float = 0.0):
