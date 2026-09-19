@@ -217,6 +217,11 @@ def collect_observation(output_dir, lat: float = settings.site.lat, lon: float =
     snapshot = build_observation_snapshot(lat, lon)
 
     if is_thunderstorm(snapshot["regular_weather"]):
-        logger.critical("Thunderstorm detected at site - skipping save for equipment safety.")
+        logger.critical("Thunderstorm detected at site. Shut down the device as soon as possible")
 
     return save_snapshot(snapshot, output_dir)
+
+
+if __name__ == "__main__":
+    if settings.debug:
+        collect_observation(settings.output_dir)

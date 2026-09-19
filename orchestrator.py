@@ -59,7 +59,7 @@ class Orchestrator:
             await self._job_scheduler.on_observation_finished(job)
             return
 
-        self._transition(job, JobState.RECORDING, pid=proc.pid)
+        self._transition(job, JobState.RECORDING, pid=proc.pid, observation_dir=job.observation_dir)
 
         start_hook_tasks = registry.emit(Event.OBSERVATION_START, job, stop_event)
 

@@ -13,7 +13,13 @@ from core.job_state import JobState
 from core.models import Job, OmmSnapshot
 from scheduling import propagator
 from scheduling.omm_updater import update_omm
-from storage.db import create_job, get_connection, get_latest_snapshot, list_jobs
+from storage.db import (
+    create_job,
+    get_connection,
+    get_latest_snapshot,
+    invalidate_overdue_pending_jobs,
+    list_jobs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +50,10 @@ class JobScheduler:
         await self.refresh_omms()
 
         with get_connection() as conn:
+            invalidated = invalidate_overdue_pending_jobs(conn)
+            if invalidated:
+                logger.warning("Invalidated %s overdue pending job(s)", invalidated)
+
             active = {j["norad_id"] for j in list_jobs(conn, state=JobState.PENDING.value)}
             active |= {j["norad_id"] for j in list_jobs(conn, state=JobState.RECORDING.value)}
 

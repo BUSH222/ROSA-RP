@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from config.settings import settings
@@ -213,6 +214,38 @@ def refresh_pending_job_snapshots(conn: sqlite3.Connection, as_of=None):
 
 def delete_job(conn: sqlite3.Connection, job_id: str):
     conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+
+
+def invalidate_overdue_pending_jobs(
+    conn: sqlite3.Connection,
+    now: datetime | None = None,
+) -> int:
+    """Cancel pending jobs whose AOS has already passed."""
+    now = now or datetime.now(UTC)
+
+    pending = conn.execute("SELECT id, aos FROM jobs WHERE state = 'pending'").fetchall()
+
+    overdue_ids = []
+    for job in pending:
+        aos = datetime.fromisoformat(job["aos"].replace("Z", "+00:00"))
+        if aos <= now:
+            overdue_ids.append(job["id"])
+
+    if not overdue_ids:
+        return 0
+
+    updated_at = utcnow_iso()
+    conn.executemany(
+        """
+        UPDATE jobs
+        SET state = 'cancelled',
+            failure_reason = ?,
+            updated_at = ?
+        WHERE id = ? AND state = 'pending'
+        """,
+        [("AOS passed before the job could be scheduled", updated_at, job_id) for job_id in overdue_ids],
+    )
+    return len(overdue_ids)
 
 
 if __name__ == "__main__":

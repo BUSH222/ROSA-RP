@@ -84,6 +84,14 @@ class Secrets(BaseSettings):
     space_track_password: str = Field(default="", env="SPACE_TRACK_PASSWORD")
 
 
+class SatdumpSettings(BaseSettings):
+    """Settings for the Satdump application."""
+
+    satdump_path_str: str = Field(default="~/gobdump", env="SATDUMP_PATH")
+    satdump_run_path_str: str = Field(default="~/gobdump/build/", env="SATDUMP_RUN_PATH")
+    satdump_database_path_str: str = Field(default="~/.config/gobdump/main.db", env="SATDUMP_DATABASE_PATH")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CONFIG__",
@@ -100,6 +108,7 @@ class Settings(BaseSettings):
     rtl_tcp: RTLTCPSettings = RTLTCPSettings()
     database: DatabaseSettings = DatabaseSettings()
     secrets: Secrets = Secrets()
+    satdump: SatdumpSettings = SatdumpSettings()
 
     output_dir: Path = Field(default=Path("observations"))
     debug: bool = Field(default=False, env="DEBUG")
