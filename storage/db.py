@@ -251,3 +251,7 @@ def invalidate_overdue_pending_jobs(
 if __name__ == "__main__":
     init_db()
     print(f"Initialized {DEFAULT_DB_PATH}")
+    if settings.debug:
+        with get_connection() as conn:
+            latest_snapshot = get_latest_snapshot(conn, 59051)
+            print(f"Latest snapshot for 59051: {dict(latest_snapshot)}")

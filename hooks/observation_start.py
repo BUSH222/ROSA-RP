@@ -23,7 +23,7 @@ def write_metadata(job, stop_event):
         "los": job.los,
         "f_center": job.f_center,
         "decimation": job.decimation,
-        "f_sample": settings.rtl_tcp.sample_rate_hz / job.decimation,
+        "f_sample": settings.rtl_tcp.sample_rate / job.decimation,
         "omm_snapshot_id": job.omm_snapshot_id,  # for doppler correction
     }
     with open(metadata_path, "w") as f:
