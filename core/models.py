@@ -152,7 +152,7 @@ class Job:
 
     @classmethod
     def from_row(cls, row):
-        return cls(**{k: row[k] for k in row})
+        return cls(**{key: row[key] for key in row.keys()})  # noqa: SIM118
 
 
 class Satellite:
