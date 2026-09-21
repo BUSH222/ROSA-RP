@@ -93,7 +93,7 @@ def run_satdump(
         input_file,
         output_dir,
         f"--samplerate={f_s}",
-        f"--baseband-format={baseband_format}",
+        f"--baseband_format={baseband_format}",
     ]
     return subprocess.run(cmd, cwd=run_path, text=True, check=True)
 
