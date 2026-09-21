@@ -10,7 +10,7 @@ from core.events import Event, registry
 from core.job_state import JobState, validate_transition
 from core.models import Job
 from process_supervisor import ProcessSupervisor
-from storage.db import get_connection, list_jobs, update_job_state
+from storage.db import get_connection, invalidate_overdue_pending_jobs, list_jobs, update_job_state
 from storage.layout import new_observation_dir, paths_for
 
 logger = logging.getLogger(__name__)
@@ -26,16 +26,24 @@ class Orchestrator:
         self._supervisor = supervisor or ProcessSupervisor()
         self._running: dict[str, asyncio.Task] = {}
 
-    async def recover_stale_jobs(self):
-        """Startup: a job stuck in 'recording' means the app died mid-pass.
-        No partial pass is salvageable, so fail it and move on (point 7)."""
-        with get_connection() as conn:
-            stale = list_jobs(conn, state=JobState.RECORDING.value)
-        for row in stale:
-            job = Job.from_row(row)
-            logger.warning("Stale recording job %s (pid=%s) at startup, marking failed", job.id, job.pid)
-            self._transition(job, JobState.FAILED, failure_reason="orphaned at startup")
-            await self._job_scheduler.on_observation_finished(job)
+
+async def recover_stale_jobs(self):
+    """Recover jobs left behind by an application restart."""
+    with get_connection() as conn:
+        invalidated = invalidate_overdue_pending_jobs(conn)
+        if invalidated:
+            logger.warning("Invalidated %s overdue pending job(s)", invalidated)
+
+        stale_recordings = list_jobs(conn, state=JobState.RECORDING.value)
+
+    for row in stale_recordings:
+        job = Job.from_row(row)
+        logger.warning(
+            "Stale recording job %s (pid=%s) at startup, marking failed",
+            job.id,
+            job.pid,
+        )
+        self._transition(job, JobState.FAILED, failure_reason="orphaned at startup")
 
     async def handle_pass_due(self, job: Job):
         """Called by JobScheduler exactly at AOS."""

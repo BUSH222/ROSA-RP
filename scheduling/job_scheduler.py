@@ -17,7 +17,6 @@ from storage.db import (
     create_job,
     get_connection,
     get_latest_snapshot,
-    invalidate_overdue_pending_jobs,
     list_jobs,
 )
 
@@ -50,16 +49,18 @@ class JobScheduler:
         await self.refresh_omms()
 
         with get_connection() as conn:
-            invalidated = invalidate_overdue_pending_jobs(conn)
-            if invalidated:
-                logger.warning("Invalidated %s overdue pending job(s)", invalidated)
+            pending_rows = list_jobs(conn, state=JobState.PENDING.value)
 
-            active = {j["norad_id"] for j in list_jobs(conn, state=JobState.PENDING.value)}
-            active |= {j["norad_id"] for j in list_jobs(conn, state=JobState.RECORDING.value)}
+        for row in pending_rows:
+            job = Job.from_row(row)
+            aos = datetime.fromisoformat(job.aos.replace("Z", "+00:00"))
+            self._schedule_job(job, aos)
+            logger.info("Re-registered pending job %s for satellite %s", job.id, job.norad_id)
+
+        pending_satellite_ids = {row["norad_id"] for row in pending_rows}
 
         for sat in satellites:
-            if sat.id in active:
-                logger.info("Satellite %s already has an active job, skipping seed", sat.id)
+            if sat.id in pending_satellite_ids:
                 continue
             await self._schedule_next_pass(sat)
 
