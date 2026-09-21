@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import time
 import zipfile
 
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def fetch_regular_weather(lat: float = settings.site.lat, lon: float = settings.site.lon):
     """Current OpenWeather conditions for the site (temp, pressure, wind, etc.)."""
-    api_key = os.getenv("OPENWEATHER_API_KEY")
+    api_key = settings.secrets.openweather_api_key
     if not api_key:
         logger.warning("OPENWEATHER_API_KEY not set; skipping regular weather.")
         return None
