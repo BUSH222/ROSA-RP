@@ -87,9 +87,11 @@ class Secrets(BaseSettings):
 class SatdumpSettings(BaseSettings):
     """Settings for the Satdump application."""
 
-    satdump_path_str: str = Field(default="~/GobDump/", env="SATDUMP_PATH")
-    satdump_run_path_str: str = Field(default="~/GobDump/build/", env="SATDUMP_RUN_PATH")
-    satdump_database_path_str: str = Field(default="~/.config/gobdump/main.db", env="SATDUMP_DATABASE_PATH")
+    satdump_path_str: str = Field(default="/home/orangepi/GobDump/", env="SATDUMP_PATH")
+    satdump_run_path_str: str = Field(default="/home/orangepi/GobDump/build/", env="SATDUMP_RUN_PATH")
+    satdump_database_path_str: str = Field(
+        default="/home/orangepi/.config/gobdump/main.db", env="SATDUMP_DATABASE_PATH"
+    )
 
 
 class Settings(BaseSettings):
