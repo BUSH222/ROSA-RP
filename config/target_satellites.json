@@ -1,0 +1,14 @@
+[
+    {
+        "id": 59051,
+        "name": "Meteor-M 2-4",
+        "frequency": 137.9e6,
+        "decimation_factor": 16
+    },
+    {
+        "id": 57166,
+        "name":"Meteor-M 2-3",
+        "frequency": 137.9e6,
+        "decimation_factor": 16
+    }
+]
