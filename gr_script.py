@@ -132,11 +132,6 @@ class OneSecondPowerWriter(gr.sync_block):
 
         self._csv_file.flush()
 
-        print(
-            f"{self._second:6d} s   power = {power_linear:12.4f}   {power_db:9.3f} dB",
-            flush=True,
-        )
-
         self._second += 1
         self._sum_power = 0.0
         self._sample_count = 0
@@ -407,20 +402,6 @@ def main():
             output_file=args.output,
             scale=args.scale,
         )
-
-        print()
-        print("75 kHz signal power measurement")
-        print("--------------------------------")
-        print(f"IQ file:        {args.iq}")
-        print(f"Doppler file:   {args.doppler}")
-        print(f"Input rate:     {args.sample_rate:.0f} S/s")
-        print(f"Output rate:    {tb.output_rate:.0f} S/s")
-        print("LPF cutoff:     35 kHz")
-        print("LPF transition: 2.5 kHz")
-        print(f"Samples/row:    {tb.samples_per_second} (exactly 1 recorded second)")
-        print()
-        print("Processing file; no wall-clock sleep is used.")
-        print()
 
         tb.start()
 
