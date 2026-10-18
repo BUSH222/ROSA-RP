@@ -2,6 +2,7 @@
 # Add any project-specific ignores here
 
 dfs/
+dfs_cleaned/
 
 # OS generated files
 .DS_Store
