@@ -1,6 +1,8 @@
 # Custom exceptions for this project
 # Add any project-specific ignores here
 
+dfs/
+
 # OS generated files
 .DS_Store
 .DS_Store?
