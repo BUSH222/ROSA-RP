@@ -3,6 +3,7 @@
 
 dfs/
 dfs_cleaned/
+dfs_filtered/
 
 # OS generated files
 .DS_Store
