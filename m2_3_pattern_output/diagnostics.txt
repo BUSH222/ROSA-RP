@@ -1,0 +1,42 @@
+M2-3 LRPT TRANSMIT ANTENNA PATTERN RECONSTRUCTION - DIAGNOSTICS
+Generated 2026-10-28T20:53:24+00:00. Gains in dBic, on the absolute scale of the supplied M2-4 reference (Ku_dB); see uncertainty_sources in m2_3_pattern_metadata.json.
+
+Inputs
+  M2-3: 346 files (12 empty), 1,875,941 rows read, 1,667 rejected, 1,874,274 valid, 334 tracks
+        rejected by reason: {'below_elevation_mask': 1667}
+        geometry per row: {'interpolated': 1684578, 'exact_knot': 187528, 'fallback_supplied': 2168}
+  M2-4: 346 files (12 empty), 1,863,935 rows read, 1,444 rejected, 1,862,491 valid, 333 tracks
+        rejected by reason: {'below_elevation_mask': 1444}
+        geometry per row: {'interpolated': 1673687, 'exact_knot': 186283, 'fallback_supplied': 2521}
+  Rejections per file: rejected_rows_by_file.csv
+
+Stage 1 - receiver calibration (M2-4, ground-station frame)
+  M2-4 rows excluded (off-boresight outside reference pattern 0-95.34 deg): 0
+  M2-4 rows used: 1,862,491 -> 22,100 populated 1-deg nodes
+  Coverage of 1-deg az/el grid (az 0-359, el 0-90): {'measured': 22100, 'interpolated': 8853, 'unsupported_gap': 1014, 'unsupported_outside_hull': 793}
+  Supported region: az [0.0, 359.0], el [0.0, 89.0] deg; supported fraction by elevation band: {'0-15': 0.995, '15-30': 1.0, '30-45': 1.0, '45-60': 0.996, '60-75': 0.944, '75-90': 0.798, '90-90': 0.0}
+
+Stage 2 - M2-3 gain recovery
+  M2-3 rows without valid receiver calibration: 5,147 (outside hull 0, gap > 5 deg 5,147)
+  M2-3 rows with recovered gain: 1,869,127
+
+Stage 3 - body-frame pattern
+  Headings: 13 rows borrowed (8 knots, max distance 387 s); 0 rows excluded for invalid heading
+  Rows outside output grid (off-nadir > 62.5 deg): 0
+  Rows used in final pattern: 1,869,127 from 334 tracks
+  Output cells: 22,680 total; measured 13,208, interpolated 6,124, unsupported (gap) 2,126, unsupported (outside hull) 1,222 -> 14.8% NaN
+  Gain range [-11.402, 9.46] dBic; maximum (normalisation reference) at az 33 deg, off-nadir 49 deg: 64 samples from tracks ['m2_3_obs_104.csv', 'm2_3_obs_231.csv']
+
+Interpolation
+  Stage 1 (receiver map, ground-station frame): samples median-aggregated to the nearest node of a 1-deg (azimuth 0-359, elevation 0-90) grid, evaluated at each M2-3 sample's own az/el; populated nodes are support points of a scipy.spatial.Delaunay triangulation in (azimuth, polar) degrees with azimuth copies at +/-360 deg for nodes within 6 deg of the seam; barycentric linear interpolation; a query is accepted only if the vertices with non-zero barycentric weight span <= 5 deg in azimuth and <= 5 deg in the polar angle; outside the convex hull -> NaN (no extrapolation).
+  Stage 3 (M2-3 pattern, body frame): samples median-aggregated to the nearest node of a 1-deg (azimuth 0-359, off-nadir 0-62) grid; measured nodes keep their median, empty nodes are interpolated; populated nodes are support points of a scipy.spatial.Delaunay triangulation in (azimuth, polar) degrees with azimuth copies at +/-360 deg for nodes within 6 deg of the seam; barycentric linear interpolation; a query is accepted only if the vertices with non-zero barycentric weight span <= 5 deg in azimuth and <= 5 deg in the polar angle; outside the convex hull -> NaN (no extrapolation).
+
+Geometry checks
+  Reconstructed orbit height (km): M2-3 {'min': 811.9186892954763, 'max': 826.9795311652431}, M2-4 {'min': 815.2665338938068, 'max': 834.5359967490984}
+  Body-frame orthonormality: {'max_abs_axis_dot': 2.220446049250313e-16, 'max_abs_norm_error': 2.220446049250313e-16, 'max_abs_det_minus_1': 6.661338147750939e-16}
+  max |off_nadir(body frame) - angle(q, nadir)|: 2.84e-14 deg
+
+Closure test (calibrate on even M2-4 tracks, recover M2-4 on odd tracks, compare with reference)
+  912,534/938,384 test rows calibrated; per-sample residual median +0.141 dB, MAD 1.751 dB
+  1-deg off-nadir binned residual: median |r| 0.311 dB, max |r| 2.125 dB
+  Median residual by M2-4 body quadrant (off-nadir >= 20 deg): {'forward_315_45': 0.181, 'starboard_45_135': 1.932, 'aft_135_225': 0.323, 'port_225_315': -1.295} dB  (non-zero = M2-4 not axisymmetric/nadir-pointing as assumed)

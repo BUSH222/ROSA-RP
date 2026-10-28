@@ -1,0 +1,400 @@
+{
+  "description": "Reconstructed Meteor-M N2-3 LRPT transmitting antenna pattern in an idealised satellite body frame. Gain in dBic: the unknown receiver calibration cancels, so the absolute scale is transferred from the supplied M2-4 reference pattern (Ku_dB). Accuracy is bounded by uncertainty_sources.",
+  "gain_unit": "dBic",
+  "uncertainty_sources": [
+    {
+      "id": 1,
+      "source": "Unequal transmit power at the antenna terminals",
+      "description": "The transfer assumes both satellites deliver the same power to their antennas (6.5 W each, including spacecraft feed/cable losses).",
+      "effect_on_m2_3": "Constant offset of the whole pattern, dB for dB; the shape is unaffected.",
+      "current_handling": "PT_M2_3_W = 6.5 W, PT_M2_4_W = 6.5 W -> correction +0.00 dB.",
+      "estimate_from_this_data": "Not observable: indistinguishable from a constant gain offset.",
+      "how_to_reduce": "Put measured or telemetry transmitter output powers into PT_M2_3_W / PT_M2_4_W."
+    },
+    {
+      "id": 2,
+      "source": "Different receive processing for the two signals",
+      "description": "The receiver constant C must be identical for both satellites. The power estimator used different frequency offsets (M2-3 2180 Hz, M2-4 2980 Hz) through an uneven passband, so the fraction of signal power captured can differ between the satellites.",
+      "effect_on_m2_3": "Constant offset of the whole pattern; a Doppler-dependent passband loss would also add forward/aft structure.",
+      "estimate_from_this_data": "M2-4 hold-out residual forward 0.181 dB vs aft 0.323 dB: no Doppler-dependent loss above ~0.5 dB for M2-4. The constant part is not observable.",
+      "how_to_reduce": "Measure the passband response at both frequency offsets and correct the captured power fraction per satellite."
+    },
+    {
+      "id": 3,
+      "source": "Definition and shape of the M2-4 reference pattern",
+      "description": "Whether Ku_dB is realised gain or directivity, dBi or dBic, and whether its off-boresight shape is correct. Outputs are labelled dBic (GAIN_UNIT).",
+      "effect_on_m2_3": "A unit/definition error is a constant offset. An error in the reference's theta-shape transfers 1:1 into M2-3's off-nadir dependence, because it is degenerate with the receiver's elevation response.",
+      "estimate_from_this_data": "Not observable from these passes; the closure test checks only self-consistency.",
+      "how_to_reduce": "Confirm the reference's provenance (measured or simulated, gain or directivity, polarisation)."
+    },
+    {
+      "id": 4,
+      "source": "In-flight M2-4 differs from the axisymmetric, nadir-pointing reference",
+      "description": "Attitude offsets, antenna tilt or polarisation effects make the real M2-4 pattern depend on body azimuth.",
+      "effect_on_m2_3": "Local, direction-dependent error: at each ground-station direction the receiver map absorbs M2-4's deviation averaged over the passes that saw that direction and passes it into M2-3 with the opposite sign.",
+      "estimate_from_this_data": "M2-4 hold-out residual by body quadrant (off-nadir >= 20 deg): {'forward_315_45': 0.181, 'starboard_45_135': 1.932, 'aft_135_225': 0.323, 'port_225_315': -1.295} dB, i.e. roughly +/-1-2 dB locally; overall offset +0.14 dB.",
+      "how_to_reduce": "find_m24_pattern_uncertainty.ipynb estimates the M2-4 deviation map, propagates it into the M2-3 grid (m2_3_gain_uncertainty.csv) and adds per-cell bootstrap scatter."
+    }
+  ],
+  "outputs": {
+    "m2_3_antenna_pattern.csv": "Regular grid azimuth_deg 0..359 x off_nadir_deg 0..62 (1 deg). gain_dbic: median of recovered per-sample gains at measured nodes (sample_count > 0), gap-limited linear interpolation at empty nodes (sample_count == 0), NaN where unsupported. normalized_gain_db = gain_dbic - max(gain_dbic).",
+    "m2_3_gain_polar.png": "Polar heatmap of gain_dbic.",
+    "m2_3_normalized_gain_polar.png": "Polar heatmap of normalized_gain_db.",
+    "receiver_response_map.csv/.png": "Stage-1 receiver response map R = C + G_r in the ground-station frame.",
+    "rejected_rows_by_file.csv": "Rejected input rows per satellite, file and reason.",
+    "input_files.csv": "Per-file row counts and time span.",
+    "diagnostics.txt": "Human-readable summary of this metadata's diagnostics block."
+  },
+  "model": {
+    "equation": "p_ij = C + G_t,ij + G_r,j + L(d_ij);  L(d) = 20 log10(lambda / (4 pi d)), d in metres",
+    "stage1": "R_j = p_4j - G_t4(theta_j) - L(d_4j) = C + G_r,j",
+    "stage2": "G_t3 = p_3j - L(d_3j) - R_hat(az_3j, alt_3j) - 10 log10(PT_M2_3_W / PT_M2_4_W)",
+    "notes": [
+      "power_db is in arbitrary units; the receiver-chain calibration C cancels between the satellites, so no absolute received-power calibration is needed (gain-comparison method with M2-4 as the reference antenna). The M2-3 gain inherits the absolute scale of Ku_dB (dBic).",
+      "Receiver antenna is not assumed isotropic: its response is mapped in the ground-station frame.",
+      "Polarisation mismatch neglected (both RHCP). Atmospheric/ionospheric losses not modelled.",
+      "Non-positive power rows are rejected, never replaced. Median aggregation is applied to recovered gains, not raw power.",
+      "Rows with power near the noise floor that were positive by chance are kept; the upstream dfs_filtered step removed rows below -50 dB and scintillation episodes.",
+      "The M2-3 pattern is not assumed axisymmetric or nadir-pointing."
+    ]
+  },
+  "conventions": {
+    "ground_station_frame": "az_deg clockwise from geodetic north in [0, 360); alt_deg above the WGS84 ellipsoid-normal horizon; ENU line of sight [cos(alt) sin(az), cos(alt) cos(az), sin(alt)].",
+    "satellite_position": "r_sat = r_GS(WGS84 geodetic -> ECEF) + range_m * u_ECEF.",
+    "body_frame": "Idealised (not measured attitude). z_b = geocentric nadir -r_sat/|r_sat|; x_b = direction of travel projected perpendicular to z_b; y_b = z_b x x_b (right-handed; starboard).",
+    "body_azimuth": "azimuth_deg = atan2(q.y_b, q.x_b) in [0, 360); 0 = direction of travel, 90 = +y_b.",
+    "off_nadir": "off_nadir_deg = atan2(sqrt(qx^2+qy^2), qz); 0 = nadir. Not the ground-station elevation.",
+    "nadir_choice": "The task's printed nadir formula equals q (satellite->GS) and would give off_nadir = 0 everywhere; the geocentric nadir was used instead, as agreed with the user.",
+    "m2_4_off_boresight": "Angle between satellite->GS and geocentric nadir (M2-4 boresight = nadir).",
+    "plot_orientation": "Polar plots show the body frame viewed from above the satellite looking toward nadir: 0 deg (forward) at top, azimuth increasing clockwise toward +y_b.",
+    "units": "Angles in degrees, distances in metres internally (range_km * 1000), gains in dBic (normalized_gain_db and the receiver response map are relative dB)."
+  },
+  "geometry_timing": {
+    "issue": "az/alt/range are given once per second at AOS + k s and were attached to 0.1 s power samples by floor(time_s), so geometry lags each sample by 0-0.9 s.",
+    "handling": "ECEF position and travel direction linearly interpolated to AOS + time_s between the surrounding per-second positions of the same track (gap <= 10 s); otherwise the supplied geometry is used and the row is counted as fallback_supplied.",
+    "enabled": true
+  },
+  "heading": {
+    "method": "Per-second unique positions per track; central chord r[i+1]-r[i-1] if both steps <= 10 s, one-sided displacement at track ends or gaps, otherwise the time-nearest valid heading of the same track (borrowed, counted). Rows sharing a timestamp are collapsed first because adjacent raw rows have zero displacement.",
+    "velocity_frame": "ecef",
+    "note": "'ecef' uses velocity relative to the rotating Earth (as specified); this differs from the inertial orbital velocity direction by ~2-3.5 deg at these latitudes."
+  },
+  "rejection_rules": {
+    "precedence": [
+      "non_finite_value",
+      "invalid_range",
+      "invalid_angle",
+      "below_elevation_mask",
+      "non_positive_power",
+      "power_linear_mismatch",
+      "power_db_mismatch"
+    ],
+    "non_finite_value": "any of ['unix_time', 'az_deg', 'alt_deg', 'range_km', 'time_s', 'p_total', 'p_noise_scaled', 'power_linear', 'power_db'] missing or non-finite",
+    "invalid_range": "range_km <= 0 or > 5000",
+    "invalid_angle": "az_deg outside [0, 360] or alt_deg outside [-90, 90]",
+    "below_elevation_mask": "alt_deg < 0",
+    "non_positive_power": "power_linear <= 0",
+    "power_linear_mismatch": "|power_linear - (p_total - p_noise_scaled)| > max(1e-07, 0.001 * |power_linear|)",
+    "power_db_mismatch": "|power_db - 10 log10(power_linear)| > 0.001 dB",
+    "later_exclusions": "M2-4: off-boresight outside the reference pattern. M2-3: receiver map unsupported (outside hull or gap > limit); invalid heading; off_nadir rounds above 62 deg."
+  },
+  "config": {
+    "GAIN_UNIT": "dBic",
+    "PT_M2_3_W": 6.5,
+    "PT_M2_4_W": 6.5,
+    "PT_DBW": 8.129133566428555,
+    "TX_POWER_CORRECTION_DB": 0.0,
+    "FREQ_HZ": 137900000.0,
+    "WAVELENGTH_M": 2.173984,
+    "GS_LAT_DEG": 55.5269,
+    "GS_LON_DEG": 37.0888,
+    "GS_ALT_M": 127.0,
+    "ellipsoid": "WGS84",
+    "MAX_INTERP_GAP_DEG": 5.0,
+    "HEADING_MAX_GAP_S": 10.0,
+    "GEOMETRY_INTERP_MAX_GAP_S": 10.0,
+    "RX_MAP_NODE_STEP_DEG": 1.0,
+    "RX_MAP_MIN_SAMPLES": 1,
+    "PATTERN_MIN_SAMPLES": 1,
+    "AZ_WRAP_PAD_DEG": 6.0,
+    "MIN_ELEVATION_DEG": 0.0,
+    "data_dir": "dfs_filtered",
+    "reference_pattern": "m2_4_pattern.csv"
+  },
+  "diagnostics": {
+    "generated_utc": "2026-10-28T20:53:24+00:00",
+    "satellites": {
+      "m2_3": {
+        "files_total": 346,
+        "files_empty": 12,
+        "tracks_with_valid_rows": 334,
+        "rows_read": 1875941,
+        "rows_rejected": 1667,
+        "rows_rejected_by_reason": {
+          "non_finite_value": 0,
+          "invalid_range": 0,
+          "invalid_angle": 0,
+          "below_elevation_mask": 1667,
+          "non_positive_power": 0,
+          "power_linear_mismatch": 0,
+          "power_db_mismatch": 0
+        },
+        "rows_valid": 1874274,
+        "unique_position_knots": 199831,
+        "knot_geometry_conflicts": 0,
+        "geometry_status_rows": {
+          "interpolated": 1684578,
+          "exact_knot": 187528,
+          "fallback_supplied": 2168
+        },
+        "tracks_with_inconsistent_time_offset": [],
+        "reconstructed_height_km": {
+          "min": 811.9186892954763,
+          "max": 826.9795311652431
+        },
+        "off_nadir_range_deg": {
+          "min": 1.5723041485396834,
+          "max": 62.41403109148954
+        },
+        "heading": {
+          "velocity_frame": "ecef",
+          "knot_status": {
+            "central": 198703,
+            "forward": 560,
+            "backward": 560,
+            "borrowed": 8
+          },
+          "knots_borrowed": 8,
+          "max_borrow_distance_s": 387.0,
+          "rows_status": {
+            "central": 1867794,
+            "forward": 3905,
+            "backward": 2562,
+            "borrowed": 13
+          },
+          "rows_borrowed": 13,
+          "rows_invalid_excluded": 0
+        },
+        "body_frame_orthonormality": {
+          "max_abs_axis_dot": 2.220446049250313e-16,
+          "max_abs_norm_error": 2.220446049250313e-16,
+          "max_abs_det_minus_1": 6.661338147750939e-16
+        },
+        "off_nadir_equivalence_max_abs_diff_deg": 2.842170943040401e-14
+      },
+      "m2_4": {
+        "files_total": 346,
+        "files_empty": 12,
+        "tracks_with_valid_rows": 333,
+        "rows_read": 1863935,
+        "rows_rejected": 1444,
+        "rows_rejected_by_reason": {
+          "non_finite_value": 0,
+          "invalid_range": 0,
+          "invalid_angle": 0,
+          "below_elevation_mask": 1444,
+          "non_positive_power": 0,
+          "power_linear_mismatch": 0,
+          "power_db_mismatch": 0
+        },
+        "rows_valid": 1862491,
+        "unique_position_knots": 195634,
+        "knot_geometry_conflicts": 0,
+        "geometry_status_rows": {
+          "interpolated": 1673687,
+          "exact_knot": 186283,
+          "fallback_supplied": 2521
+        },
+        "tracks_with_inconsistent_time_offset": [],
+        "reconstructed_height_km": {
+          "min": 815.2665338938068,
+          "max": 834.5359967490984
+        },
+        "off_nadir_range_deg": {
+          "min": 1.2246918495635597,
+          "max": 62.34972890846108
+        },
+        "heading": {
+          "velocity_frame": "ecef",
+          "knot_status": {
+            "central": 194268,
+            "forward": 671,
+            "backward": 671,
+            "borrowed": 24
+          },
+          "knots_borrowed": 24,
+          "max_borrow_distance_s": 86.0,
+          "rows_status": {
+            "central": 1855180,
+            "forward": 4302,
+            "backward": 2978,
+            "borrowed": 31
+          },
+          "rows_borrowed": 31,
+          "rows_invalid_excluded": 0
+        },
+        "body_frame_orthonormality": {
+          "max_abs_axis_dot": 2.220446049250313e-16,
+          "max_abs_norm_error": 2.220446049250313e-16,
+          "max_abs_det_minus_1": 6.661338147750939e-16
+        },
+        "off_nadir_equivalence_max_abs_diff_deg": 2.842170943040401e-14
+      }
+    },
+    "stage1_receiver_calibration": {
+      "reference_first_sample_deg": 1.0296,
+      "reference_max_theta_deg": 95.3356,
+      "rows_outside_reference_pattern": 0,
+      "rows_used": 1862491,
+      "populated_nodes": 22100,
+      "node_sample_count": {
+        "min": 1,
+        "median": 39.0,
+        "max": 4000
+      },
+      "grid_coverage": {
+        "measured": 22100,
+        "interpolated": 8853,
+        "unsupported_gap": 1014,
+        "unsupported_outside_hull": 793
+      },
+      "grid_supported_fraction": 0.9448,
+      "supported_az_range_deg": [
+        0.0,
+        359.0
+      ],
+      "supported_el_range_deg": [
+        0.0,
+        89.0
+      ],
+      "supported_fraction_by_el_band": {
+        "0-15": 0.995,
+        "15-30": 1.0,
+        "30-45": 1.0,
+        "45-60": 0.996,
+        "60-75": 0.944,
+        "75-90": 0.798,
+        "90-90": 0.0
+      }
+    },
+    "stage2_m2_3_gain": {
+      "rows_rx_outside_hull": 0,
+      "rows_rx_gap_exceeded": 5147,
+      "rows_without_calibration": 5147,
+      "rows_with_gain": 1869127,
+      "tx_power_correction_db": 0.0
+    },
+    "stage3_body_frame_pattern": {
+      "rows_with_gain_but_invalid_heading": 0,
+      "rows_outside_grid": 0,
+      "rows_used": 1869127,
+      "tracks_used": 334,
+      "cells": {
+        "measured": 13208,
+        "interpolated": 6124,
+        "unsupported_gap": 2126,
+        "unsupported_outside_hull": 1222,
+        "total_cells": 22680,
+        "unsupported_fraction": 0.14761904761904762,
+        "samples_used_in_bins": 1869127
+      },
+      "gain_unit": "dBic",
+      "gain_range_db": [
+        -11.402,
+        9.46
+      ],
+      "max_cell": {
+        "azimuth_deg": 33,
+        "off_nadir_deg": 49,
+        "gain_db": 9.46,
+        "sample_count": 64,
+        "tracks": [
+          "m2_3_obs_104.csv",
+          "m2_3_obs_231.csv"
+        ]
+      }
+    },
+    "methods": {
+      "stage1_interpolation": "Stage 1 (receiver map, ground-station frame): samples median-aggregated to the nearest node of a 1-deg (azimuth 0-359, elevation 0-90) grid, evaluated at each M2-3 sample's own az/el; populated nodes are support points of a scipy.spatial.Delaunay triangulation in (azimuth, polar) degrees with azimuth copies at +/-360 deg for nodes within 6 deg of the seam; barycentric linear interpolation; a query is accepted only if the vertices with non-zero barycentric weight span <= 5 deg in azimuth and <= 5 deg in the polar angle; outside the convex hull -> NaN (no extrapolation).",
+      "stage3_interpolation": "Stage 3 (M2-3 pattern, body frame): samples median-aggregated to the nearest node of a 1-deg (azimuth 0-359, off-nadir 0-62) grid; measured nodes keep their median, empty nodes are interpolated; populated nodes are support points of a scipy.spatial.Delaunay triangulation in (azimuth, polar) degrees with azimuth copies at +/-360 deg for nodes within 6 deg of the seam; barycentric linear interpolation; a query is accepted only if the vertices with non-zero barycentric weight span <= 5 deg in azimuth and <= 5 deg in the polar angle; outside the convex hull -> NaN (no extrapolation)."
+    },
+    "closure_test": {
+      "residual_by_body_quadrant_db": {
+        "forward_315_45": 0.181,
+        "starboard_45_135": 1.932,
+        "aft_135_225": 0.323,
+        "port_225_315": -1.295
+      },
+      "calibration_tracks": 166,
+      "test_tracks": 167,
+      "test_rows": 938384,
+      "test_rows_with_calibration": 912534,
+      "sample_residual_median_db": 0.14088316413377405,
+      "sample_residual_mad_db": 1.7512181627542307,
+      "binned_residual_median_abs_db": 0.31148644500056644,
+      "binned_residual_max_abs_db": 2.125339418910982,
+      "binned_residual_by_off_nadir_deg": {
+        "3": -0.298,
+        "4": 0.593,
+        "5": -0.422,
+        "6": -0.029,
+        "7": 0.99,
+        "8": 0.401,
+        "9": -0.5,
+        "10": -0.72,
+        "11": -0.733,
+        "12": -0.149,
+        "13": 0.814,
+        "14": 0.82,
+        "15": -2.125,
+        "16": 0.454,
+        "17": -0.721,
+        "18": -0.553,
+        "19": -0.195,
+        "20": -1.3,
+        "21": -0.697,
+        "22": -0.731,
+        "23": -1.128,
+        "24": -0.137,
+        "25": 0.048,
+        "26": 0.34,
+        "27": 0.778,
+        "28": 0.775,
+        "29": 0.618,
+        "30": 0.768,
+        "31": 0.579,
+        "32": 1.121,
+        "33": 0.077,
+        "34": 0.134,
+        "35": 0.441,
+        "36": -0.194,
+        "37": 0.28,
+        "38": -0.116,
+        "39": 0.094,
+        "40": 0.588,
+        "41": 0.158,
+        "42": 0.352,
+        "43": 0.761,
+        "44": 0.219,
+        "45": 0.325,
+        "46": -0.051,
+        "47": 0.061,
+        "48": -0.03,
+        "49": 0.137,
+        "50": 0.012,
+        "51": 0.298,
+        "52": 0.087,
+        "53": 0.34,
+        "54": 0.067,
+        "55": 0.054,
+        "56": -0.157,
+        "57": 0.081,
+        "58": 0.046,
+        "59": 0.115,
+        "60": -0.016,
+        "61": 0.118,
+        "62": 0.264
+      }
+    }
+  }
+}
